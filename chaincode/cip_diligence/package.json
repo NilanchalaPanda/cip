@@ -1,0 +1,22 @@
+{
+  "name": "cip-diligence",
+  "version": "1.0.0",
+  "description": "Hyperledger Fabric chaincode for CIP startup due diligence",
+  "main": "index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "fabric-chaincode-node start",
+    "test": "mocha"
+  },
+  "dependencies": {
+    "fabric-contract-api": "~2.5",
+    "fabric-shim": "~2.5"
+  },
+  "devDependencies": {
+    "mocha": "^10.4.0"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}
