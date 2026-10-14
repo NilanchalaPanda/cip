@@ -633,30 +633,30 @@ checks the caller's MSP identity.
 
 The following table summarizes the setup, deployment, business workflow, and negative tests completed during the lab.
 
-| No. | Test / Action | Function / Command | Result | Notes |
-| --: | --- | --- | --- | --- |
-| 1 | JavaScript syntax check | `node --check index.js` | **Passed** | No syntax errors detected. |
-| 2 | Start Fabric network | `./network.sh up` | **Passed** | Orderer and Org1/Org2 peers started. |
-| 3 | Create channel | `./network.sh createChannel -c mychannel` | **Existing channel** | `mychannel` already existed and was reused. |
-| 4 | Initial chaincode deployment | `./network.sh deployCC ... -ccs 1` | **Passed** | Version 1.0, sequence 1. |
-| 5 | Register startup | `applyStartup` | **Passed** | Registered `startup001` — Acme Innovations. |
-| 6 | Read startup | `getStartup` | **Passed** | Retrieved the startup record. |
-| 7 | Assign validators | `assignValidators` — Org1 | **Passed** | Assigned Validator A and Validator B. |
-| 8 | Submit Validator A report | `submitValidatorReport` — Org2 | **Passed** | Approval report recorded. |
-| 9 | Submit Validator B report | `submitValidatorReport` — Org2 | **Passed** | Approval report recorded. |
-| 10 | Verify startup | `getStartup` | **Passed** | `verificationStatus` became `VERIFIED`. |
-| 11 | List verified startups | `getVerifiedStartups` | **Passed** | Returned `startup001`. |
-| 12 | Unauthorized validator assignment | `assignValidators` — Org2 | **Rejected as expected** | `Only the platform can assign validators`. |
-| 13 | Redeploy updated chaincode | `./network.sh deployCC ... -ccs 2` | **Passed** | Sequence 2 committed; ledger data persisted. |
-| 14 | Submit investor query | `submitInvestorQuery` — Org2 | **Passed** | Submitted Year 1 projected-revenue question. |
-| 15 | Answer investor query | `answerInvestorQuery` — Org2 | **Passed** | Answer recorded for query index 0. |
-| 16 | Propose investment | `proposeInvestment` — Org2 | **Passed** | Proposed 50,000,000 units; initially pending. |
-| 17 | Accept investment proposal | `respondToInvestment` — Org1 | **Passed** | Proposal index 0 accepted. |
-| 18 | Create milestone | `createMilestone` — Org1 | **Passed** | Created `M1`, Prototype Completion, amount 10,000,000. |
-| 19 | Verify milestone | `verifyMilestone` — Org2 | **Passed** | `M1` verified. |
-| 20 | Release milestone funds | `releaseFunds` — Org2 | **Passed** | `M1` marked `PAID`; `releasedFunds` became 10,000,000. |
-| 21 | Query final startup record | `getStartup` | **Passed** | Query, answer, accepted investment, paid milestone, and released total were present. |
-| 22 | Attempt duplicate fund release | `releaseFunds` — Org2 | **Rejected as expected** | `Funds have already been released for this milestone`. |
+| No. | Test / Action                     | Function / Command                        | Result                   | Notes                                                                                |
+| --: | --------------------------------- | ----------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------ |
+|   1 | JavaScript syntax check           | `node --check index.js`                   | **Passed**               | No syntax errors detected.                                                           |
+|   2 | Start Fabric network              | `./network.sh up`                         | **Passed**               | Orderer and Org1/Org2 peers started.                                                 |
+|   3 | Create channel                    | `./network.sh createChannel -c mychannel` | **Existing channel**     | `mychannel` already existed and was reused.                                          |
+|   4 | Initial chaincode deployment      | `./network.sh deployCC ... -ccs 1`        | **Passed**               | Version 1.0, sequence 1.                                                             |
+|   5 | Register startup                  | `applyStartup`                            | **Passed**               | Registered `startup001` — Acme Innovations.                                          |
+|   6 | Read startup                      | `getStartup`                              | **Passed**               | Retrieved the startup record.                                                        |
+|   7 | Assign validators                 | `assignValidators` — Org1                 | **Passed**               | Assigned Validator A and Validator B.                                                |
+|   8 | Submit Validator A report         | `submitValidatorReport` — Org2            | **Passed**               | Approval report recorded.                                                            |
+|   9 | Submit Validator B report         | `submitValidatorReport` — Org2            | **Passed**               | Approval report recorded.                                                            |
+|  10 | Verify startup                    | `getStartup`                              | **Passed**               | `verificationStatus` became `VERIFIED`.                                              |
+|  11 | List verified startups            | `getVerifiedStartups`                     | **Passed**               | Returned `startup001`.                                                               |
+|  12 | Unauthorized validator assignment | `assignValidators` — Org2                 | **Rejected as expected** | `Only the platform can assign validators`.                                           |
+|  13 | Redeploy updated chaincode        | `./network.sh deployCC ... -ccs 2`        | **Passed**               | Sequence 2 committed; ledger data persisted.                                         |
+|  14 | Submit investor query             | `submitInvestorQuery` — Org2              | **Passed**               | Submitted Year 1 projected-revenue question.                                         |
+|  15 | Answer investor query             | `answerInvestorQuery` — Org2              | **Passed**               | Answer recorded for query index 0.                                                   |
+|  16 | Propose investment                | `proposeInvestment` — Org2                | **Passed**               | Proposed 50,000,000 units; initially pending.                                        |
+|  17 | Accept investment proposal        | `respondToInvestment` — Org1              | **Passed**               | Proposal index 0 accepted.                                                           |
+|  18 | Create milestone                  | `createMilestone` — Org1                  | **Passed**               | Created `M1`, Prototype Completion, amount 10,000,000.                               |
+|  19 | Verify milestone                  | `verifyMilestone` — Org2                  | **Passed**               | `M1` verified.                                                                       |
+|  20 | Release milestone funds           | `releaseFunds` — Org2                     | **Passed**               | `M1` marked `PAID`; `releasedFunds` became 10,000,000.                               |
+|  21 | Query final startup record        | `getStartup`                              | **Passed**               | Query, answer, accepted investment, paid milestone, and released total were present. |
+|  22 | Attempt duplicate fund release    | `releaseFunds` — Org2                     | **Rejected as expected** | `Funds have already been released for this milestone`.                               |
 
 ### Test Outcome
 
@@ -664,15 +664,15 @@ The end-to-end business workflow was executed successfully: startup registration
 
 The chaincode definition was upgraded from sequence 1 to sequence 2. The existing startup record and its ledger state remained available after the upgrade.
 
-### Final consistency note
+### Follow-up after the recorded run
 
-The final `getStartup` output showed `status: "NOT_VALIDATED"` while `verificationStatus: "VERIFIED"`. This is observed behavior in the current contract and should be reviewed against the assignment's expected meaning for the two fields before making a code change.
+The final `getStartup` output showed `status: "NOT_VALIDATED"` while `verificationStatus: "VERIFIED"`. The source was later changed so both fields are updated when all validator reports have been submitted. The updated source also adds a validator reassignment guard and checks milestone allocations against accepted investment totals. These later changes still need a new deployment and network tests; the results above describe the earlier tested version.
 
 ---
 
 ## 12. Upgrade chaincode definition to sequence 2
 
-After the initial tests, the local chaincode contained the complete workflow functions. The chaincode definition was upgraded to sequence 2 on `mychannel`.
+After the initial tests, the local chaincode contained the complete workflow functions. The chaincode definition was upgraded to sequence 2 on `mychannel`. This upgrade occurred before the follow-up source changes described in the final notes; sequence 2 should not be treated as containing those later changes unless a new deployment is performed.
 
 **Run from:** `fabric-samples/test-network`
 
@@ -1041,13 +1041,14 @@ The following workflow functions were executed successfully on `mychannel` using
 - `releaseFunds`
 
 The tested negative cases were:
+
 - Org2 attempting `assignValidators`, rejected with `Only the platform can assign validators`.
 - Releasing funds for already-paid milestone `M1` a second time, rejected with `Funds have already been released for this milestone`.
 
 Before final submission, review the following contract-level points against the assignment specification:
 
-1. The `status` field remains `NOT_VALIDATED` while `verificationStatus` is `VERIFIED`. Confirm whether these are intended to be independent fields or should be synchronized.
-2. The investment amount and milestone amount are stored as integer units. The contract does not enforce a currency.
-3. The current tested path successfully released `10000000` units for `M1`; the current implementation's workflow should be checked against the assignment for any requirement that milestone totals be capped by the accepted investment amount.
+1. The earlier run showed `status: NOT_VALIDATED` alongside `verificationStatus: VERIFIED`. The source was subsequently changed to synchronize these fields when all reports are submitted; this change still needs a fresh network test.
+2. Investment and milestone amounts are stored as integer units. The contract does not enforce a currency.
+3. The source now checks accepted investment totals when creating milestones and recording releases. These new checks need to be tested on the network.
 
-These are review notes, not failures observed during the commands above.
+These notes distinguish the recorded test results from code changes made afterward.

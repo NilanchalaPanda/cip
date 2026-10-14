@@ -1,129 +1,64 @@
 # 02. Chaincode Fundamentals
 
-## 1. Objective
+## 1. Overview
 
-This document explains the structure of the CIP Due Diligence smart contract, its interaction with the Fabric ledger, and the initial business functions implemented in JavaScript.
+The CIP Due Diligence contract is written in JavaScript using the Hyperledger Fabric Contract API. It stores startup information and the due-diligence and investment workflow in the Fabric ledger.
 
-## 2. What Is Chaincode?
+## 2. Project Files
 
-Chaincode is the application logic executed by Hyperledger Fabric peers. It defines the transactions that applications can submit to read or modify ledger state.
+- `index.js` contains the `CIPDiligence` contract and its transaction functions.
+- `package.json` lists the runtime dependencies and scripts.
+- `package-lock.json` records the resolved npm dependency versions.
 
-In this assignment, the chaincode implements startup registration, validator assessment, and subsequent investment-related operations.
+## 3. Contract Context and Identity
 
-The contract is implemented in JavaScript using the Hyperledger Fabric Contract API.
+Each transaction receives a context (`ctx`). The contract uses `ctx.stub` to read and write ledger state and `ctx.clientIdentity.getMSPID()` to identify the caller's organization.
 
-## 3. Project Structure
+The current demonstration assigns platform operations to `Org1MSP` and validator/investor operations to `Org2MSP`. An MSP ID identifies an organization, not an individual business role. This setup therefore demonstrates organization-level access checks, not full role separation.
 
-- `index.js` contains the contract class and transaction functions.
-- `package.json` declares the chaincode entry point, runtime requirement, and dependencies.
-- `package-lock.json` records the resolved npm dependency tree after installation.
+## 4. Transaction Timestamps
 
-The contract currently exports the `CIPDiligence` class through `module.exports.contracts`.
+`_getTxTime(ctx)` reads the timestamp from `ctx.stub.getTxTimestamp()`. Using the proposal timestamp avoids each endorsing peer independently generating a wall-clock timestamp during execution.
 
-## 4. Contract Class
+## 5. Ledger State
 
-The contract imports the Fabric Contract API:
+`_readStartup()` reads a startup record and throws an error if the key does not exist. Records are stored as JSON encoded in a buffer:
 
-    const { Contract } = require('fabric-contract-api');
+```js
+await ctx.stub.putState(startupId, Buffer.from(JSON.stringify(startup)));
+```
 
-The `CIPDiligence` class extends `Contract`. Its methods define the transactions that the chaincode exposes.
+A transaction's state changes become committed only after Fabric's endorsement, ordering, and validation process succeeds.
 
-The `ctx` argument is the transaction context. It provides access to the ledger stub, client identity, and other transaction-related information.
+## 6. Transaction Functions
 
-## 5. Client Organization Identity
+| Function                | Purpose                                                                  |
+| ----------------------- | ------------------------------------------------------------------------ |
+| `applyStartup`          | Creates a startup record and rejects duplicate IDs.                      |
+| `getStartup`            | Reads one startup record.                                                |
+| `assignValidators`      | Lets Org1 assign validators before reports are submitted.                |
+| `submitValidatorReport` | Records an assigned validator's approval or rejection.                   |
+| `getVerifiedStartups`   | Returns startup records whose verification status is `VERIFIED`.         |
+| `submitInvestorQuery`   | Adds a query for a verified startup.                                     |
+| `answerInvestorQuery`   | Adds an answer to an existing query.                                     |
+| `proposeInvestment`     | Adds a positive-amount investment proposal.                              |
+| `respondToInvestment`   | Lets Org1 accept or reject a pending proposal.                           |
+| `createMilestone`       | Creates a milestone after an investment is accepted.                     |
+| `verifyMilestone`       | Marks a pending milestone as verified.                                   |
+| `releaseFunds`          | Records payment for a verified milestone and prevents duplicate release. |
 
-The `_getMSP(ctx)` helper calls:
+## 7. Validation and State Rules
 
-    ctx.clientIdentity.getMSPID()
+The contract checks required fields, duplicate startup and milestone IDs, validator assignment, duplicate validator reports, valid status transitions, positive safe-integer amounts, and duplicate milestone payments. Milestone allocation and recorded releases are also limited to the total accepted investment amount.
 
-An MSP ID identifies the Membership Service Provider associated with the submitting identity. The current implementation uses `Org1MSP` for platform operations and `Org2MSP` for validator operations.
+The contract records a fund release in the ledger; it does not transfer real currency. Amounts are stored as integer units, and no currency conversion is performed.
 
-An MSP ID identifies an organization, not a specific individual or business role. Additional identity-level authorization is needed if several roles share an organization.
+## 8. Syntax Check
 
-## 6. Transaction Timestamps
+Run this from `chaincode/cip_diligence`:
 
-The `_getTxTime(ctx)` helper reads the timestamp supplied by Fabric using `ctx.stub.getTxTimestamp()`.
+```bash
+node --check index.js
+```
 
-Using the proposal timestamp avoids generating a different wall-clock timestamp independently on each endorsing peer. This supports deterministic execution.
-
-The timestamp helper must still be tested against the installed Fabric dependencies.
-
-## 7. Reading and Writing Ledger State
-
-### Reading state
-
-    const bytes = await ctx.stub.getState(startupId);
-
-The result is a byte buffer. An empty result indicates that no value exists for that key.
-
-### Writing state
-
-    await ctx.stub.putState(
-        startupId,
-        Buffer.from(JSON.stringify(startup))
-    );
-
-The JavaScript object is serialized to JSON and encoded as bytes before being written to the transaction's proposed state.
-
-A successful `putState()` call does not, by itself, mean that the update has been committed. The transaction must pass Fabric's endorsement, ordering, and validation process.
-
-## 8. Implemented Business Functions
-
-### `applyStartup`
-
-Validates required fields, rejects duplicate startup IDs, initializes the startup record, and writes it to the ledger.
-
-### `getStartup`
-
-Reads a startup record and converts its stored JSON back into a JavaScript object.
-
-### `assignValidators`
-
-Checks the submitting organization's MSP ID, parses the validator list, validates the entries, and updates the startup record.
-
-### `submitValidatorReport`
-
-Checks the submitting MSP, confirms that the supplied validator name is assigned to the startup, records the report, and calculates the verification status once all assigned validators have reported.
-
-The current implementation uses validator names supplied as transaction arguments. These names are not independently bound to the caller's certificate.
-
-### `getVerifiedStartups`
-
-Iterates over the chaincode's ledger key range and returns records whose `verificationStatus` is `VERIFIED`.
-
-## 9. Syntax Validation
-
-The command:
-
-    node --check index.js
-
-checks JavaScript syntax without executing the contract or connecting to Fabric.
-
-Passing this check does not establish business-rule correctness, dependency compatibility, successful endorsement, or successful ledger commitment.
-
-## 10. Current Implementation Status
-
-Implemented:
-
-- [x] Contract class and export
-- [x] MSP identity helper
-- [x] Transaction timestamp helper
-- [x] Startup registration
-- [x] Startup retrieval
-- [x] Validator assignment
-- [x] Validator report submission
-- [x] Verified-startup query
-
-Pending:
-
-- [ ] Investor questions and responses
-- [ ] Investment proposals and responses
-- [ ] Milestone creation and verification
-- [ ] Fund release and duplicate-payment protection
-- [ ] Automated tests
-- [ ] Full authorization and state-transition review
-- [ ] Chaincode deployment and transaction-flow verification
-
-## 11. Next Steps
-
-Continue implementing the remaining CIP workflow, then test the contract before deploying it to the Fabric test network.
+This verifies JavaScript syntax. The actual transaction results are recorded in `05-cip-diligence-execution-log.md`.

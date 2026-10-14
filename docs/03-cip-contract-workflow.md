@@ -1,180 +1,66 @@
 # 03. CIP Contract Workflow
 
-## 1. Objective
+## 1. Startup Verification
 
-This document describes the business workflow implemented by the CIP Due Diligence chaincode, including startup verification and investor queries.
+`applyStartup` creates a record with `status: NOT_VALIDATED` and `verificationStatus: PENDING`. Org1 assigns validators with `assignValidators`. Each assigned validator submits one `APPROVE` or `REJECT` report through `submitValidatorReport`.
 
-## 2. Startup Verification Prerequisite
+After all assigned validators have submitted reports, the contract sets both `status` and `verificationStatus` to `VERIFIED` if all reports approve, or `REJECTED` if at least one report rejects. Validator reassignment is blocked after a report has been submitted so earlier reports cannot be left attached to a changed validator list.
 
-A startup is registered with an initial `verificationStatus` of `PENDING`.
+`getVerifiedStartups` returns records whose `verificationStatus` is `VERIFIED`.
 
-The platform assigns validators. Assigned validators submit reports with a decision of `APPROVE` or `REJECT`. Once all assigned validators have submitted their reports, the contract calculates the final verification status.
+## 2. Investor Queries
 
-The current implementation uses the following statuses:
+### `submitInvestorQuery(startupId, question)`
 
-- `PENDING` — verification is incomplete.
-- `VERIFIED` — all submitted validator decisions are approvals.
-- `REJECTED` — at least one submitted validator decision is a rejection, once all required reports are present.
+The caller must belong to `Org2MSP`, the question must be non-empty, and the startup must be verified. The contract appends the question, an empty answer list, and a transaction timestamp to the startup record.
 
-## 3. Investor Query Workflow
+### `answerInvestorQuery(startupId, queryIndex, answer)`
 
-### Transaction: `submitInvestorQuery`
+The caller must belong to `Org2MSP`; the answer and query index are validated before the answer is appended. The first query has index `0`.
 
-**Arguments:** `startupId`, `question`
+The current implementation records the answerer's MSP ID as `Org2MSP`, not a specific individual validator. This is consistent with the organization-level identity checks used in this lab, but it does not provide individual role verification.
 
-The transaction:
+## 3. Investment Proposals
 
-1. Checks that the submitting identity belongs to `Org2MSP`.
-2. Validates that the question is non-empty.
-3. Loads the startup record.
-4. Requires the startup to have `verificationStatus` equal to `VERIFIED`.
-5. Appends the question, an empty answer list, and the transaction timestamp to `investorQueries`.
-6. Writes the updated startup record to the ledger.
+### `proposeInvestment(startupId, amount)`
 
-### Transaction: `answerInvestorQuery`
+An Org2 caller can propose a positive safe-integer amount for a verified startup. The proposal is stored with status `PENDING` and a transaction timestamp.
 
-**Arguments:** `startupId`, `queryIndex`, `answer`
+### `respondToInvestment(startupId, planIndex, response)`
 
-The transaction:
+An Org1 caller can respond to a pending proposal with `ACCEPTED` or `REJECTED`. A proposal that has already been answered cannot be answered again.
 
-1. Checks that the submitting identity belongs to `Org2MSP`.
-2. Validates that the answer is non-empty.
-3. Loads the startup record.
-4. Checks that `queryIndex` is a valid integer referring to an existing question.
-5. Appends the answer and transaction timestamp to the question's `answers` array.
-6. Writes the updated startup record to the ledger.
+## 4. Milestones and Fund Release
 
-## 4. Array Indexing
+### `createMilestone(startupId, milestoneId, title, amount)`
 
-The `queryIndex` argument identifies a question by its position in `investorQueries`. The first question has index `0`, the second has index `1`, and so on.
+An Org1 caller can create a milestone for a verified startup only after an investment proposal has been accepted. The milestone ID must be unique, and the sum of milestone amounts cannot exceed the accepted investment total.
 
-Array indices are simple for a learning assignment, but they are less stable than unique query IDs if records are ever reordered or removed.
+### `verifyMilestone(startupId, milestoneId)`
 
-## 5. Authorization Limitation
+An Org2 caller can verify a milestone only while its status is `PENDING`. The contract records `verifiedAt` and changes the status to `VERIFIED`.
 
-The assignment uses `Org2MSP` for both investor and validator operations. Checking the MSP ID alone therefore cannot distinguish these two roles. The current checks demonstrate organization-level authorization, not complete role-level authorization.
+### `releaseFunds(startupId, milestoneId)`
 
-## 6. Timestamp Consistency
+An Org2 caller can record release only for a `VERIFIED` milestone. The contract marks it `PAID`, records `paidAt`, increments `releasedFunds`, prevents duplicate release, and rejects a release that would exceed the accepted investment total.
 
-The query and answer timestamps use the contract's `_getTxTime(ctx)` helper, which reads the Fabric transaction timestamp rather than generating a timestamp from the local system clock.
+This function records the release in the ledger. It does not transfer money through a bank or payment service.
 
-## 7. Investment Proposal Workflow
+## 5. Status Values
 
-### Transaction: `proposeInvestment`
+| Record          | Status values                           |
+| --------------- | --------------------------------------- |
+| Startup         | `NOT_VALIDATED`, `VERIFIED`, `REJECTED` |
+| Verification    | `PENDING`, `VERIFIED`, `REJECTED`       |
+| Investment plan | `PENDING`, `ACCEPTED`, `REJECTED`       |
+| Milestone       | `PENDING`, `VERIFIED`, `PAID`           |
 
-**Arguments:** `startupId`, `amount`
+## 6. Authorization Notes
 
-The transaction:
+The lab uses `Org1MSP` for platform/startup operations and `Org2MSP` for validator/investor operations. Because validator and investor operations share `Org2MSP`, these checks cannot distinguish the two business roles. The validator name supplied to a report is also not independently verified against the caller's certificate.
 
-1. Checks that the submitting identity belongs to `Org2MSP`.
-2. Converts the supplied amount into a number and requires a positive safe integer.
-3. Loads the startup record.
-4. Requires the startup to be verified.
-5. Appends an investment plan with the investor MSP ID, amount, `PENDING` status, proposal timestamp, and an empty response timestamp.
-6. Writes the updated startup record to the ledger.
+## 7. Test Status
 
-### Transaction: `respondToInvestment`
+The execution log records successful execution of the full workflow on `mychannel`: startup registration, validator reports, verified-startup lookup, investor query and answer, investment proposal and acceptance, milestone creation and verification, and fund release. It also records rejection of an unauthorized validator assignment and a duplicate fund release.
 
-**Arguments:** `startupId`, `planIndex`, `response`
-
-The transaction:
-
-1. Checks that the submitting identity belongs to `Org1MSP`.
-2. Accepts only `ACCEPTED` or `REJECTED` as a response.
-3. Loads the startup record and validates the plan index.
-4. Requires the proposal to still have `PENDING` status.
-5. Records the response and transaction timestamp.
-6. Writes the updated startup record to the ledger.
-
-### Investment Statuses
-
-- `PENDING` — the proposal has not been answered.
-- `ACCEPTED` — the proposal has been accepted.
-- `REJECTED` — the proposal has been rejected.
-
-Accepting a proposal does not itself release funds. Fund release is handled by a separate milestone-based workflow.
-
-### Authorization Note
-
-The current implementation treats `Org1MSP` as the platform/startup side and `Org2MSP` as the investor/validator side. These are demonstration-level organization checks, not distinct business-role identities.
-
-## 8. Current Status
-
-- [x] Startup registration and retrieval
-- [x] Validator assignment and report submission
-- [x] Verified-startup query
-- [x] Investor questions and responses
-- [x] Investment proposals and responses
-- [ ] Milestone creation and verification
-- [ ] Fund release and duplicate-payment protection
-- [ ] Automated tests
-- [ ] Authorization and state-transition review
-
-## 9. Milestone and Fund Release Workflow
-
-### Transaction: `createMilestone`
-
-**Arguments:** `startupId`, `milestoneId`, `title`, `amount`
-
-The transaction:
-
-1. Checks that the caller belongs to `Org1MSP`.
-2. Validates the milestone ID, title, and positive safe-integer amount.
-3. Loads the startup and requires it to be verified.
-4. Rejects duplicate milestone IDs within that startup.
-5. Creates a milestone with `PENDING` status and transaction timestamp.
-6. Writes the updated startup record to the ledger.
-
-### Transaction: `verifyMilestone`
-
-**Arguments:** `startupId`, `milestoneId`
-
-The transaction:
-
-1. Checks that the caller belongs to `Org2MSP`.
-2. Loads the startup and locates the milestone.
-3. Requires the milestone to exist and have `PENDING` status.
-4. Changes its status to `VERIFIED` and records `verifiedAt`.
-5. Writes the updated startup record to the ledger.
-
-### Transaction: `releaseFunds`
-
-**Arguments:** `startupId`, `milestoneId`
-
-The transaction:
-
-1. Checks that the caller belongs to `Org2MSP`.
-2. Loads the startup and locates the milestone.
-3. Rejects a milestone that has already been paid.
-4. Requires the milestone to have `VERIFIED` status.
-5. Adds the milestone's stored amount to `releasedFunds`, after checking the resulting total is a safe integer.
-6. Changes the milestone status to `PAID`, records `paidAt`, and writes the updated startup record.
-
-This transaction records a release in the ledger. It does not initiate a bank transfer or move real money.
-
-### Milestone Statuses
-
-- `PENDING` — created but not verified.
-- `VERIFIED` — approved for release.
-- `PAID` — the release has been recorded.
-
-### Important Limitation
-
-The current implementation checks organization membership, not distinct investor and validator roles. Both roles use `Org2MSP`, so additional identity-level authorization would be needed to distinguish them reliably.
-
-## 10. Current Status
-
-- [x] Startup registration and retrieval
-- [x] Validator assignment and report submission
-- [x] Verified-startup query
-- [x] Investor questions and responses
-- [x] Investment proposals and responses
-- [x] Milestone creation and verification
-- [x] Milestone-based release recording
-- [ ] Automated tests
-- [ ] Authorization and state-transition review
-- [ ] Chaincode deployment and end-to-end verification
-
-## 11. Next Step
-
-Run syntax checks, review the full contract for inconsistent state transitions, and add automated tests before deploying it to the Fabric test network.
+The added investment cap and validator reassignment guard are code changes made after that recorded run. Redeploy the updated contract and rerun the workflow before treating those new rules as network-tested.

@@ -1,95 +1,49 @@
-# 01. Local Environment Setup
+# 01. Environment Setup
 
-## 1. Objective
+## 1. Environment
 
-The objective of this phase is to inspect and prepare the local development environment for executing the CIP Due Diligence project using Hyperledger Fabric. Before deploying the chaincode, the existing Fabric installation, dependencies, Docker containers, and network configuration are checked to avoid unnecessary reinstallation or disruption of previous work.
+The assignment was run on Fedora Linux using the existing Hyperledger Fabric installation.
 
-## 2. Development Environment
+| Component       | Version or path                                              |
+| --------------- | ------------------------------------------------------------ |
+| Workspace       | `/home/nxl/Projects/hyperledger`                             |
+| Fabric samples  | `/home/nxl/Projects/hyperledger/fabric-samples`              |
+| Test network    | `/home/nxl/Projects/hyperledger/fabric-samples/test-network` |
+| Fabric binaries | `/home/nxl/Projects/hyperledger/bin`                         |
+| Fabric config   | `/home/nxl/Projects/hyperledger/config`                      |
+| Docker          | 29.8.2                                                       |
+| Docker Compose  | 5.6.0                                                        |
+| Node.js         | v24.18.1                                                     |
+| npm             | 11.16.0                                                      |
+| Fabric peer     | v2.5.16 (`f871cf9`)                                          |
 
-| Component | Current Details |
-|---|---|
-| Operating system | Fedora Linux |
-| Project workspace | `/home/nxl/Projects/hyperledger` |
-| Fabric samples directory | `/home/nxl/Projects/hyperledger/fabric-samples` |
-| Fabric test network | `/home/nxl/Projects/hyperledger/fabric-samples/test-network` |
-| Fabric binaries | `/home/nxl/Projects/hyperledger/bin` |
-| Fabric configuration | `/home/nxl/Projects/hyperledger/config` |
-| Docker | 29.8.2 |
-| Docker Compose | 5.6.0 |
-| Node.js | v24.18.1 |
-| npm | 11.16.0 |
-| Hyperledger Fabric peer binary | v2.5.16 |
-| Go CLI | Not currently available through the shell's PATH |
-| Network status | Not running at the time of inspection; existing containers were found stopped |
-| CIP chaincode deployment | Pending verification |
+## 2. Workspace
 
-## 3. Workspace Organization
+The assignment files are kept in `cip-diligence-lab/` so they remain separate from the existing Fabric samples.
 
-A dedicated workspace was created for the CIP Due Diligence assignment.
+- `chaincode/cip_diligence/` contains the JavaScript contract and npm files.
+- `docs/` contains the setup notes, contract explanation, workflow, lifecycle notes, and execution log.
 
-**Workspace:** `/home/nxl/Projects/hyperledger/cip-diligence-lab`
+## 3. Existing Network State
 
-The following directories were created:
+The machine already contained containers and artifacts from earlier Fabric exercises. I checked the existing setup before starting the test network. The `cartrade-sdk` container was unrelated to this assignment and was left untouched.
 
-- `docs/` — Technical documentation organized by topic.
-- `logs/` — Command output, execution logs, and error records.
-- `evidence/` — Screenshots and other verification evidence.
-- `notes/` — Learning notes, observations, and troubleshooting details.
+The test network was started from `fabric-samples/test-network`. The `mychannel` channel already existed, so the attempt to create it again could not join the existing ledger. I continued using the existing channel rather than deleting or recreating network data.
 
-The existing Fabric samples directory is being preserved so that the new assignment does not unnecessarily modify previous work.
+## 4. Chaincode Dependencies
 
-## 4. Existing Fabric Installation
+From `cip-diligence-lab/chaincode/cip_diligence`, the dependencies were installed with `npm install`. The installed top-level packages included `fabric-contract-api@2.5.8`, `fabric-shim@2.5.8`, and `mocha@10.8.2`.
 
-The local Fabric installation contains the following binaries:
+The JavaScript syntax check is:
 
-- `peer` — Interacts with peers and executes Fabric CLI operations.
-- `orderer` — Runs the ordering service.
-- `configtxgen` — Generates channel and ordering-service configuration artifacts.
-- `cryptogen` — Generates cryptographic identities and certificates.
-- `fabric-ca-client` and `fabric-ca-server` — Support certificate authority operations.
+```bash
+node --check index.js
+```
 
-The installed peer binary reports Hyperledger Fabric version 2.5.16, with commit SHA `f871cf9`.
+This checks syntax only. The transaction results recorded in `05-cip-diligence-execution-log.md` document the network tests.
 
-The Fabric configuration directory contains `core.yaml`, `orderer.yaml`, and `configtx.yaml`.
+## 5. Result
 
-## 5. Initial Docker Inspection
+The chaincode was deployed to `mychannel` as version `1.0`, sequence `1`, and then upgraded to sequence `2`. The end-to-end workflow and two negative cases are recorded in the execution log.
 
-The `docker ps` command showed one running container named `cartrade-sdk`. No Fabric peer, orderer, or certificate authority container was running at the time of inspection.
-
-The `docker ps -a` command showed previously created Fabric containers, including:
-
-- `peer0.org1.example.com`
-- `peer0.org2.example.com`
-- `peer0.org3.example.com`
-- `orderer.example.com`
-- Certificate authority containers for the organizations and orderer
-
-Previously created chaincode containers associated with `vehicle` and `erc20` were also present.
-
-These results indicate that the machine contains artifacts from earlier Fabric exercises. The state of the previous network and the presence of a channel or committed chaincode must be verified before starting or recreating the network.
-
-## 6. Prerequisites Requiring Verification
-
-The following checks remain pending:
-
-1. Verify the installed Fabric binary versions.
-2. Verify the network script and its supported commands.
-3. Confirm the compatibility of the installed Node.js version with the chaincode runtime.
-4. Check whether the Go toolchain is required for the remaining tasks.
-5. Determine whether the existing network can be reused or whether a separate clean test network is preferable.
-
-## 7. Initial Conclusion
-
-The local environment already contains Hyperledger Fabric binaries, configuration files, sample projects, and previous Docker artifacts. Therefore, the next step is to verify the existing installation and network configuration rather than reinstalling Fabric immediately.
-
-No network startup, teardown, or chaincode redeployment has been performed as part of this initial inspection.
-
-## 8. Evidence and Verification
-
-Evidence to add as the environment checks are completed:
-
-- [x] Fabric binary version output
-- [x] Fabric network script help output
-- [x] Docker container status
-- [x] Network configuration inspection
-- [ ] Final confirmation that the environment is ready for the CIP assignment
+The npm installation reported four high-severity audit findings and a pending install-script approval for `protobufjs`. These warnings were not resolved by automatically applying dependency upgrades.
